@@ -1,6 +1,11 @@
 package com.leojgp.backupmanager;
 
 import java.io.*;
+import java.nio.file.*;
+import java.security.Key;
+import java.util.Base64;
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPReply;
@@ -12,6 +17,8 @@ public class FTPConnection {
     private static final String USUARIO = "ftpadminLeo";
     private static final String PASSWORD = "password123";
     private static final String LOCAL_DIR = "C:\\Users\\leona\\Documents\\2DAM\\ProyectoProcesos\\syncFTPServer";
+    private static final String AES_PASSWORD = "PasswordInquebrantableAntiRobosYAntiCopiadas";
+    private static final int AES_KEY_LENGTH = 32;
 
     public FTPConnection() {
         clienteFTP = new FTPClient();
@@ -43,7 +50,15 @@ public class FTPConnection {
     public boolean subirFichero(String path) throws IOException {
         File ficheroLocal = new File(path);
         try (InputStream is = new FileInputStream(ficheroLocal)) {
-            boolean enviado = clienteFTP.storeFile(ficheroLocal.getName(), is);
+            byte[] contenido = is.readAllBytes();
+            String contenidoCifrado = null;
+            try {
+                contenidoCifrado = cifrar(new String(contenido), AES_PASSWORD);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            InputStream encryptedStream = new ByteArrayInputStream(contenidoCifrado.getBytes());
+            boolean enviado = clienteFTP.storeFile(ficheroLocal.getName(), encryptedStream);
             if (enviado) {
                 System.out.println("Subida exitosa: " + ficheroLocal.getName());
             } else {
@@ -64,6 +79,27 @@ public class FTPConnection {
     }
 
     public boolean descargarFichero(String ficheroRemoto, String pathLocal) throws IOException {
+        File localFile = new File(pathLocal);
+        try (OutputStream os = new FileOutputStream(localFile)) {
+            boolean recibido = clienteFTP.retrieveFile(ficheroRemoto, os);
+            if (recibido) {
+                byte[] contenidoCifrado = Files.readAllBytes(localFile.toPath());
+                String contenidoDescifrado = null;
+                try {
+                    contenidoDescifrado = descifrar(new String(contenidoCifrado), AES_PASSWORD);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                Files.write(localFile.toPath(), contenidoDescifrado.getBytes());
+                System.out.println("Descargado y descifrado exitosamente: " + ficheroRemoto + " a " + pathLocal);
+            } else {
+                System.err.println("Fallo al descargar: " + ficheroRemoto + " - " + clienteFTP.getReplyString());
+            }
+            return recibido;
+        }
+    }
+
+    public boolean descargarFicheroSinDescifrado(String ficheroRemoto, String pathLocal) throws IOException {
         File localFile = new File(pathLocal);
         File parentDir = localFile.getParentFile();
         if (parentDir != null && !parentDir.exists()) {
@@ -89,7 +125,7 @@ public class FTPConnection {
         }
         File fichero = new File(LOCAL_DIR + "\\" + fileName);
         try (FileWriter writer = new FileWriter(fichero)) {
-            writer.write("Este es un archivo de prueba para el FTP");
+            writer.write("Otura es el mejor pueblo de Granada");
             System.out.println("Archivo creado o modificado: " + fileName);
         }
     }
@@ -115,6 +151,22 @@ public class FTPConnection {
         }
     }
 
+    private static String cifrar(String textoEnClaro, String password) throws Exception {
+        Key key = new SecretKeySpec(password.getBytes(), 0, AES_KEY_LENGTH, "AES");
+        Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+        cipher.init(Cipher.ENCRYPT_MODE, key);
+        byte[] cipherText = cipher.doFinal(textoEnClaro.getBytes());
+        return Base64.getEncoder().encodeToString(cipherText);
+    }
+
+    private static String descifrar(String textoCifrado, String password) throws Exception {
+        Key key = new SecretKeySpec(password.getBytes(), 0, AES_KEY_LENGTH, "AES");
+        Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+        cipher.init(Cipher.DECRYPT_MODE, key);
+        byte[] plainText = cipher.doFinal(Base64.getDecoder().decode(textoCifrado));
+        return new String(plainText);
+    }
+
     public static void main(String[] args) {
         FTPConnection gestorFTP = new FTPConnection();
         try {
@@ -127,21 +179,15 @@ public class FTPConnection {
             gestorFTP.crearFichero(fileName);
             gestorFTP.subirFichero(localPath);
 
-            // Descargo para ver el contenido
-            gestorFTP.descargarFichero(fileName,"C:\\Users\\leona\\Documents\\2DAM\\ProyectoProcesos\\downloadsFromServer\\test_downloaded.txt");
+            gestorFTP.descargarFichero(fileName, "C:\\Users\\leona\\Documents\\2DAM\\ProyectoProcesos\\downloadsFromServer\\test_downloaded.txt");
 
-            // Modifico y subo
-            gestorFTP.modificarFichero(fileName);
-            gestorFTP.subirFichero(localPath);
+            gestorFTP.descargarFicheroSinDescifrado(fileName, "C:\\Users\\leona\\Documents\\2DAM\\ProyectoProcesos\\downloadsFromServer\\test_downloaded_sin_descifrar.txt");
 
-            // Descargo de nuevo para ver el cambio
-            gestorFTP.descargarFichero(fileName,"C:\\Users\\leona\\Documents\\2DAM\\ProyectoProcesos\\downloadsFromServer\\test_downloaded_modified.txt");
-
-            // Borro localmente y del servidor
-            gestorFTP.borrarFicheroLocal(fileName);
             gestorFTP.eliminarFichero(fileName);
+            gestorFTP.borrarFicheroLocal(fileName);
 
             gestorFTP.desconectar();
+
         } catch (IOException e) {
             System.err.println("Error: " + e.getMessage());
         }
