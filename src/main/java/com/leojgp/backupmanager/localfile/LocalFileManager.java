@@ -1,8 +1,8 @@
 package com.leojgp.backupmanager.localfile;
 
 import com.leojgp.backupmanager.config.FTPConfiguration;
+import com.leojgp.backupmanager.localfile.threads.*;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -15,6 +15,26 @@ public class LocalFileManager {
         this.config = config;
     }
 
+    public Runnable crearFicheroTask(String fileName, String content) {
+        return new CreateFileTask(this, fileName, content);
+    }
+
+    public Runnable modificarFicheroTask(String fileName, String content) {
+        return new ModifyFileTask(this, fileName, content);
+    }
+
+    public Runnable borrarFicheroLocalTask(String fileName) {
+        return new DeleteFileTask(this, fileName);
+    }
+
+    public Runnable leerBytesFicheroTask(String fileName) {
+        return new ReadBytesTask(this, fileName);
+    }
+
+    public Runnable escribirBytesFicheroTask(String fileName, byte[] content) {
+        return new WriteBytesTask(this, fileName, content);
+    }
+
     public void crearFichero(String fileName, String content) throws IOException {
         File dir = new File(config.getLocalDir());
         if (!dir.exists()) {
@@ -22,7 +42,7 @@ public class LocalFileManager {
             System.out.println("Carpeta creada: " + config.getLocalDir());
         }
         File fichero = new File(config.getLocalDir() + "\\" + fileName);
-        try (FileWriter writer = new FileWriter(fichero)) {
+        try (java.io.FileWriter writer = new java.io.FileWriter(fichero)) {
             writer.write(content);
             System.out.println("Archivo creado o modificado: " + fileName);
         }
@@ -30,7 +50,7 @@ public class LocalFileManager {
 
     public void modificarFichero(String fileName, String content) throws IOException {
         File fichero = new File(config.getLocalDir() + "\\" + fileName);
-        try (FileWriter writer = new FileWriter(fichero)) {
+        try (java.io.FileWriter writer = new java.io.FileWriter(fichero)) {
             writer.write(content);
             System.out.println("Archivo modificado localmente: " + fileName);
         }

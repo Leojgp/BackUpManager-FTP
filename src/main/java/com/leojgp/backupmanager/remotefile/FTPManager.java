@@ -55,11 +55,14 @@ public class FTPManager {
             byte[] contenido = is.readAllBytes();
             String contenidoCifrado = encryptionManager.cifrar(new String(contenido));
             InputStream encryptedStream = new ByteArrayInputStream(contenidoCifrado.getBytes());
+
+            System.out.println("Subiendo archivo: " + ficheroLocal.getName());
             boolean enviado = clienteFTP.storeFile(ficheroLocal.getName(), encryptedStream);
+
             if (enviado) {
                 System.out.println("Subida exitosa: " + ficheroLocal.getName());
             } else {
-                System.err.println("Fallo al subir: " + ficheroLocal.getName() + " - " + clienteFTP.getReplyString());
+                System.err.println("Fallo al subir: " + ficheroLocal.getName() + " - Código: " + clienteFTP.getReplyCode());
             }
             return enviado;
         }
@@ -108,17 +111,5 @@ public class FTPManager {
             }
             return recibido;
         }
-    }
-
-    public void crearFichero(String fileName) throws IOException {
-        localFileManager.crearFichero(fileName, "Otura es el mejor pueblo de Granada");
-    }
-
-    public void modificarFichero(String fileName) throws IOException {
-        localFileManager.modificarFichero(fileName, "Contenido modificado del archivo");
-    }
-
-    public void borrarFicheroLocal(String fileName) {
-        localFileManager.borrarFicheroLocal(fileName);
     }
 }
