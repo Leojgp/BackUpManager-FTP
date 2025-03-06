@@ -1,8 +1,6 @@
 package com.leojgp.backupmanager;
 
 import com.leojgp.backupmanager.config.FTPConfiguration;
-import com.leojgp.backupmanager.localfile.LocalFileManager;
-import com.leojgp.backupmanager.localfile.threads.FileUploadTask;
 import com.leojgp.backupmanager.remotefile.FTPManager;
 
 import java.io.File;
@@ -20,7 +18,6 @@ public class Main {
     public static void main(String[] args) {
         FTPConfiguration config = new FTPConfiguration();
         FTPManager ftpManager = new FTPManager(config);
-        LocalFileManager localFileManager = new LocalFileManager(config);
 
         int numThreads = 4;
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
@@ -46,13 +43,22 @@ public class Main {
 
                             if (!lastModifiedMap.containsKey(filePath) || lastModified > lastModifiedMap.get(filePath)) {
                                 System.out.println("Cambio detectado en: " + filePath);
-                                executor.execute(new FileUploadTask(ftpManager, filePath.toString()));
+                                executor.execute(() -> {
+                                    try {
+                                        System.out.println("Subiendo archivo: " + filePath.toString() + " en hilo: " + Thread.currentThread().getName());
+                                        ftpManager.subirFichero(filePath.toString());
+                                    } catch (Exception e) {
+                                        System.err.println("Error al subir archivo al servidor: " + filePath.getFileName());
+                                        e.printStackTrace();
+                                    }
+                                });;
                                 lastModifiedMap.put(filePath, lastModified);
                             }
                         }
                     }
 
                     // Detectar eliminaciones
+                    Thread.sleep(1000);
                     List<Path> filesToDelete = new ArrayList<>();
                     for (Path filePath : lastModifiedMap.keySet()) {
                         if (!currentFiles.containsKey(filePath)) {
@@ -61,6 +67,7 @@ public class Main {
                                 try {
                                     ftpManager.eliminarFichero(filePath.getFileName().toString());
                                     System.out.println("Archivo eliminado del servidor: " + filePath.getFileName());
+                                    lastModifiedMap.remove(filePath);//Eliminar del mapa aquí
                                 } catch (Exception e) {
                                     System.err.println("Error al eliminar archivo del servidor: " + filePath.getFileName());
                                     e.printStackTrace();
@@ -68,9 +75,6 @@ public class Main {
                             });
                             filesToDelete.add(filePath);
                         }
-                    }
-                    for (Path filePath : filesToDelete) {
-                        lastModifiedMap.remove(filePath);
                     }
                 }
 
@@ -83,6 +87,8 @@ public class Main {
 
         } catch (IOException e) {
             e.printStackTrace();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         } finally {
             executor.shutdown();
             try {
