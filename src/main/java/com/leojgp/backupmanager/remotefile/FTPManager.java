@@ -15,6 +15,11 @@ import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.net.ftp.FTPReply;
 
+/**
+ * Clase para gestionar la conexión y operaciones con un servidor FTP.
+ * Permite listar, conectar, desconectar, subir, eliminar y descargar archivos.
+ * Utiliza cifrado para proteger los archivos transferidos.
+ */
 public class FTPManager {
 
     private FTPClient clienteFTP;
@@ -55,6 +60,10 @@ public class FTPManager {
         }
     }
 
+/**
+ * Sube un archivo local cifrado al servidor FTP, moviendo el fichero existente al historico.
+ *
+ * */
     public boolean subirFichero(String path) throws Exception {
         File ficheroLocal = new File(path);
         try (InputStream is = new FileInputStream(ficheroLocal)) {

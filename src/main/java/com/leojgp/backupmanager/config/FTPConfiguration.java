@@ -4,6 +4,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 
+/**
+ * Clase para cargar y proporcionar la configuración del servidor FTP y parámetros de cifrado.
+ * Lee la configuración desde el archivo "config.properties".
+ */
 public class FTPConfiguration {
 
     private static final String CONFIG_FILE = "config.properties";

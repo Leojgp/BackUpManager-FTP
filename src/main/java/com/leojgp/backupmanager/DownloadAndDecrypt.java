@@ -7,6 +7,10 @@ import org.apache.commons.net.ftp.FTPFile;
 import java.io.File;
 import java.io.IOException;
 
+/**
+ * Clase para descargar y descifrar archivos desde un servidor FTP a un directorio local.
+ * Descarga archivos desde el directorio "history/" del servidor y los descifra.
+ */
 public class DownloadAndDecrypt {
 
     public static void main(String[] args) {

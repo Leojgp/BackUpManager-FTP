@@ -13,6 +13,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
+/**
+ * Clase principal que monitoriza un directorio local y sincroniza los cambios con un servidor FTP.
+ * Utiliza multihilo para mejorar la eficiencia de la sincronización.
+ */
 public class Main {
 
     public static void main(String[] args) {
@@ -57,7 +61,6 @@ public class Main {
                         }
                     }
 
-                    // Detectar eliminaciones
                     Thread.sleep(1000);
                     List<Path> filesToDelete = new ArrayList<>();
                     for (Path filePath : lastModifiedMap.keySet()) {
@@ -67,7 +70,7 @@ public class Main {
                                 try {
                                     ftpManager.eliminarFichero(filePath.getFileName().toString());
                                     System.out.println("Archivo eliminado del servidor: " + filePath.getFileName());
-                                    lastModifiedMap.remove(filePath);//Eliminar del mapa aquí
+                                    lastModifiedMap.remove(filePath);
                                 } catch (Exception e) {
                                     System.err.println("Error al eliminar archivo del servidor: " + filePath.getFileName());
                                     e.printStackTrace();
